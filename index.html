@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Dynamic Terrain Car Game</title>
+  <style>
+    body {
+      margin: 0;
+      background-color: #e0f7fa;
+      font-family: Arial, sans-serif;
+      overflow: hidden;
+    }
+    h1 {
+      text-align: center;
+      padding: 10px;
+      margin: 0;
+    }
+    #gameCanvas {
+      display: block;
+      margin: 0 auto;
+      border: 2px solid black;
+      background-color: #87CEEB;
+    }
+    #controls {
+      position: fixed;
+      bottom: 0;
+      width: 100%;
+      background: #00796B;
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      padding: 10px 0;
+      z-index: 10;
+    }
+    #controls button {
+      font-size: 20px;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      background-color: #ffffff;
+      color: #00796B;
+      font-weight: bold;
+    }
+    #stats {
+      position: fixed;
+      top: 10px;
+      right: 20px;
+      background-color: rgba(255, 255, 255, 0.9);
+      padding: 10px 15px;
+      border-radius: 8px;
+      font-weight: bold;
+      z-index: 10;
+    }
+    #countdown, #gameOverScreen {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(255, 255, 255, 0.95);
+      padding: 40px;
+      border-radius: 15px;
+      font-size: 36px;
+      font-weight: bold;
+      z-index: 20;
+      display: none;
+    }
+    #gameOverScreen button {
+      font-size: 18px;
+      margin-top: 20px;
+      padding: 10px 20px;
+    }
+  </style>
+  <script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => console.log("Service Worker Registered"))
+      .catch(err => console.error("Service Worker Failed", err));
+  }
+</script>
+
+</head>
+<body>
+  <h1>Dynamic Terrain Car Game</h1>
+
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+
+  <div id="stats">
+    Score: <span id="score">0</span> | Level: <span id="level">1</span>
+  </div>
+
+  <div id="controls">
+    <button id="jumpBtn">Jump</button>
+    <button id="forwardBtn">Forward</button>
+    <button id="brakeBtn">Brake</button>
+  </div>
+
+  <div id="countdown">3</div>
+  <div id="gameOverScreen">
+    <div id="gameOverText">Game Over</div>
+    <button onclick="restartGame()">Restart</button>
+  </div>
+
+  <audio id="jumpSound" src="jump.mp3" preload="auto"></audio>
+  <audio id="crashSound" src="crash.mp3" preload="auto"></audio>
+
+  <script src="script.js"></script>
+</body>
+</html>

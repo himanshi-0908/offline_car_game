@@ -1,0 +1,15 @@
+{
+  "name": "Offline Car Game",
+  "short_name": "CarGame",
+  "start_url": "index.html",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0088cc",
+  "icons": [
+    {
+      "src": "sport-car.png",
+      "sizes": "128x128",
+      "type": "image/gif"
+    }
+  ]
+}
