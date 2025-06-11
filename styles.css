@@ -1,0 +1,60 @@
+body {
+  margin: 0;
+  padding: 0;
+  background: #111;
+  color: white;
+  font-family: sans-serif;
+  text-align: center;
+}
+
+canvas {
+  background: #222;
+  display: block;
+  margin: 20px auto;
+  border: 3px solid #444;
+  border-radius: 10px;
+}
+
+.controls {
+  margin-top: 10px;
+}
+
+button {
+  margin: 5px;
+  padding: 10px 20px;
+  font-size: 16px;
+  border: none;
+  border-radius: 8px;
+  background: #28a745;
+  color: white;
+  cursor: pointer;
+}
+
+button:hover {
+  background: #218838;
+}
+
+#startBtnWrapper {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 10;
+}
+
+#restartBtn {
+  display: none;
+  margin-top: 20px;
+  background-color: #ffc107;
+  color: #000;
+}
+
+#restartBtn:hover {
+  background-color: #e0a800;
+}
+
+
+
+
+
+
