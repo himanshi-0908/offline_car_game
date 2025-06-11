@@ -1,275 +1,239 @@
-// Updated script.js with enhanced jump physics and idle-game-over condition
-
 const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
-const jumpBtn = document.getElementById("jumpBtn");
-const forwardBtn = document.getElementById("forwardBtn");
-const brakeBtn = document.getElementById("brakeBtn");
-
-const scoreDisplay = document.getElementById("score");
-const levelDisplay = document.getElementById("level");
-const countdownDisplay = document.getElementById("countdown");
-const gameOverScreen = document.getElementById("gameOverScreen");
-const gameOverText = document.getElementById("gameOverText");
-
-const jumpSound = document.getElementById("jumpSound");
-const crashSound = document.getElementById("crashSound");
-
 const carImage = new Image();
-carImage.src = "car.png";
-const obstacleImage = new Image();
-obstacleImage.src = "obstacle.png";
+carImage.src = "images/car.png";
 
-let car = {
+const roadImage = new Image();
+roadImage.src = "images/road.jpg";
+
+const coinImage = new Image();
+coinImage.src = "images/coin.png";
+
+const powerImage = new Image();
+powerImage.src = "images/power.png";
+
+const obstacleSources = ["images/obstacle1.png", "images/obstacle2.png"];
+const obstacleImages = obstacleSources.map(src => {
+  const img = new Image();
+  img.src = src;
+  return img;
+});
+
+const car = {
   x: 100,
   y: 300,
-  width: 50,
-  height: 30,
-  velocityY: 0,
-  velocityX: 0,
-  onGround: false,
-  gravity: 0.5,
-  jumpPowerY: -10,
-  jumpPowerX: 2,
-  speed: 0,
-  maxSpeed: 5,
+  width: 60,
+  height: 40,
+  speed: 2,
+  dy: 0,
+  gravity: 1,
+  jumping: false
 };
 
-let terrain = [];
-let terrainLength = 2000;
-let terrainOffset = 0;
+let bgX = 0;
 let score = 0;
-let level = 1;
+let gameOver = false;
 let obstacles = [];
-let isGameOver = false;
+let coins = [];
+let powers = [];
+let obstacleSpawnTimer = 0;
+let coinSpawnTimer = 0;
+let powerSpawnTimer = 0;
 let gameStarted = false;
-let countdown = 3;
-let idleTime = 0;
 
-function generateTerrain() {
-  terrain = [];
-  for (let x = 0; x < terrainLength; x++) {
-    let y = 300 + 30 * Math.sin(x * 0.01) + 10 * Math.sin(x * 0.05);
-    terrain.push({ x, y });
-  }
-}
+const bgMusic = new Audio("audio/bg-music.mp3");
+bgMusic.loop = true;
+bgMusic.volume = 0.3;
 
-function generateObstacles() {
-  obstacles = [];
-  for (let i = 300; i < terrainLength; i += 400) {
-    const y = getTerrainY(i) - 40;
-    obstacles.push({ x: i, y, width: 40, height: 40 });
-  }
-}
-
-function getTerrainY(x) {
-  if (x < 0 || x >= terrain.length) return 300;
-  return terrain[Math.floor(x)].y;
-}
-
-function drawTerrain() {
-  ctx.fillStyle = "green";
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height);
-  for (let x = 0; x < canvas.width; x++) {
-    const terrainX = x + terrainOffset;
-    const y = getTerrainY(terrainX);
-    ctx.lineTo(x, y);
-  }
-  ctx.lineTo(canvas.width, canvas.height);
-  ctx.closePath();
-  ctx.fill();
-}
-
-function drawCar() {
-  const carWidth = car.width;
-  const carHeight = car.height;
-  const angle = Math.atan2(
-    getTerrainY(car.x + terrainOffset + 1) - getTerrainY(car.x + terrainOffset),
-    1
-  );
-
-  ctx.save();
-  ctx.translate(car.x, car.y);
-  ctx.rotate(angle);
-  ctx.drawImage(carImage, -carWidth / 2, -carHeight / 2, carWidth, carHeight);
-  ctx.restore();
-}
-
-function drawObstacles() {
-  obstacles.forEach(ob => {
-    const screenX = ob.x - terrainOffset;
-    if (screenX > -40 && screenX < canvas.width + 40) {
-      ctx.drawImage(obstacleImage, screenX, ob.y, ob.width, ob.height);
-    }
-  });
-}
-
-function drawBackground() {
-  ctx.fillStyle = "#87CEEB";
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  ctx.fillStyle = "white";
-  ctx.beginPath();
-  ctx.arc(100, 80, 20, 0, Math.PI * 2);
-  ctx.arc(120, 80, 25, 0, Math.PI * 2);
-  ctx.arc(140, 80, 20, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-function update() {
-  if (!gameStarted || isGameOver) return;
-
-  const terrainY = getTerrainY(car.x + terrainOffset);
-
-  if (car.y < terrainY - car.height / 2) {
-    car.velocityY += car.gravity;
-    car.onGround = false;
-  } else {
-    car.y = terrainY - car.height / 2;
-    car.velocityY = 0;
-    car.onGround = true;
-  }
-
-  car.y += car.velocityY;
-  car.x += car.velocityX;
-
-  if (car.speed > 0) {
-    terrainOffset += car.speed;
-    idleTime = 0;
-  } else {
-    idleTime++;
-    if (idleTime > 300) { // ~5 seconds at 60 FPS
-      endGame("Game Over: Car stopped for too long!");
-    }
-  }
-
-  score += Math.floor(car.speed);
-
-  if (score > level * 1000) {
-    level++;
-    car.maxSpeed += 0.5;
-  }
-
-  obstacles.forEach(ob => {
-    const carFrontX = car.x + terrainOffset;
-    if (
-      carFrontX + car.width / 2 > ob.x &&
-      carFrontX - car.width / 2 < ob.x + ob.width &&
-      car.y + car.height / 2 > ob.y
-    ) {
-      endGame("Crashed into obstacle!");
-    }
-  });
-
-  if (car.y > canvas.height) {
-    endGame("Car fell off the path!");
-  }
-
-  scoreDisplay.textContent = score;
-  levelDisplay.textContent = level;
-}
-
-function draw() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  drawBackground();
-  drawTerrain();
-  drawObstacles();
-  drawCar();
-}
-
-function loop() {
-  update();
-  draw();
-  requestAnimationFrame(loop);
-}
-
-function endGame(message) {
-  isGameOver = true;
-  crashSound.play();
-  gameOverText.textContent = message;
-  gameOverScreen.style.display = "block";
-}
-
-function restartGame() {
-  car = {
-    x: 100,
-    y: 300,
-    width: 50,
-    height: 30,
-    velocityY: 0,
-    velocityX: 0,
-    onGround: false,
-    gravity: 0.5,
-    jumpPowerY: -10,
-    jumpPowerX: 2,
-    speed: 0,
-    maxSpeed: 5
-  };
-  terrainOffset = 0;
-  score = 0;
-  level = 1;
-  isGameOver = false;
-  gameStarted = false;
-  idleTime = 0;
-  gameOverScreen.style.display = "none";
-  countdown = 3;
-  countdownDisplay.textContent = countdown;
-  countdownDisplay.style.display = "block";
-  startCountdown();
-}
-
-function startCountdown() {
-  const interval = setInterval(() => {
-    countdown--;
-    if (countdown > 0) {
-      countdownDisplay.textContent = countdown;
-    } else {
-      countdownDisplay.textContent = "Go!";
-      clearInterval(interval);
-      setTimeout(() => {
-        countdownDisplay.style.display = "none";
-        gameStarted = true;
-      }, 1000);
-    }
-  }, 1000);
-}
-
-jumpBtn.onclick = () => {
-  if (car.onGround && gameStarted && !isGameOver) {
-    car.velocityY = car.jumpPowerY;
-    car.velocityX = car.jumpPowerX; // move forward during jump
-    jumpSound.play();
-  }
-};
-
-forwardBtn.onmousedown = () => {
-  if (gameStarted && !isGameOver) {
-    car.speed = car.maxSpeed;
-  }
-};
-forwardBtn.onmouseup = () => {
-  car.speed = 0;
-};
-
-brakeBtn.onclick = () => {
-  car.speed = 0;
-};
-
-canvas.onclick = () => {
-  if (!gameStarted && !isGameOver) startCountdown();
-};
-
-generateTerrain();
-generateObstacles();
-startCountdown();
-loop();
-
-window.addEventListener("offline", () => {
-  alert("You're offline! Launching offline game mode...");
-  if (!gameStarted && !isGameOver) {
-    restartGame();
+document.getElementById("startBtn").addEventListener("click", () => {
+  if (!gameStarted) {
+    gameStarted = true;
+    bgMusic.play().catch(err => console.log("Autoplay blocked:", err));
+    document.getElementById("startBtnWrapper").style.display = "none";
+    document.getElementById("restartBtn").style.display = "none";
+    updateGame();
   }
 });
 
+document.getElementById("restartBtn").addEventListener("click", () => {
+  score = 0;
+  gameOver = false;
+  obstacles = [];
+  coins = [];
+  powers = [];
+  car.y = 300;
+  car.dy = 0;
+  document.getElementById("restartBtn").style.display = "none";
+  updateGame();
+});
+
+document.getElementById("jumpBtn").onclick = () => {
+  if (!car.jumping) {
+    car.dy = -15;
+    car.jumping = true;
+  }
+};
+document.getElementById("forwardBtn").onmousedown = () => {
+  car.speed = 6;
+};
+document.getElementById("forwardBtn").onmouseup = () => {
+  car.speed = 2;
+};
+document.getElementById("brakeBtn").onclick = () => {
+  car.speed = 1;
+};
+
+function drawCar() {
+  ctx.drawImage(carImage, car.x, car.y, car.width, car.height);
+}
+
+function drawBackground() {
+  bgX -= car.speed / 2;
+  if (bgX <= -canvas.width) bgX = 0;
+  ctx.drawImage(roadImage, bgX, 0, canvas.width, canvas.height);
+  ctx.drawImage(roadImage, bgX + canvas.width, 0, canvas.width, canvas.height);
+}
+
+function createObstacle() {
+  let img = obstacleImages[Math.floor(Math.random() * obstacleImages.length)];
+  obstacles.push({
+    x: canvas.width,
+    y: 300,
+    width: 40,
+    height: 40,
+    speed: car.speed,
+    img: img
+  });
+}
+
+function createCoin() {
+  coins.push({
+    x: canvas.width,
+    y: 260 + Math.random() * 40, // near car level
+    width: 30,
+    height: 30,
+    speed: car.speed
+  });
+}
+
+function createPower() {
+  powers.push({
+    x: canvas.width,
+    y: 260,
+    width: 30,
+    height: 30,
+    speed: car.speed
+  });
+}
+
+function updateObstacles() {
+  obstacles.forEach((obs, index) => {
+    obs.x -= car.speed;
+    ctx.drawImage(obs.img, obs.x, obs.y, obs.width, obs.height);
+
+    if (
+      car.x < obs.x + obs.width &&
+      car.x + car.width > obs.x &&
+      car.y < obs.y + obs.height &&
+      car.y + car.height > obs.y
+    ) {
+      gameOver = true;
+    }
+
+    if (obs.x + obs.width < 0) obstacles.splice(index, 1);
+  });
+}
+
+function updateCoins() {
+  coins.forEach((coin, index) => {
+    coin.x -= car.speed;
+    ctx.drawImage(coinImage, coin.x, coin.y, coin.width, coin.height);
+
+    if (
+      car.x < coin.x + coin.width &&
+      car.x + car.width > coin.x &&
+      car.y < coin.y + coin.height &&
+      car.y + car.height > coin.y
+    ) {
+      score += 10;
+      coins.splice(index, 1);
+    }
+
+    if (coin.x + coin.width < 0) coins.splice(index, 1);
+  });
+}
+
+function updatePowers() {
+  powers.forEach((p, index) => {
+    p.x -= car.speed;
+    ctx.drawImage(powerImage, p.x, p.y, p.width, p.height);
+
+    if (
+      car.x < p.x + p.width &&
+      car.x + car.width > p.x &&
+      car.y < p.y + p.height &&
+      car.y + car.height > p.y
+    ) {
+      score += 25;
+      powers.splice(index, 1);
+    }
+
+    if (p.x + p.width < 0) powers.splice(index, 1);
+  });
+}
+
+function updateGame() {
+  if (gameOver) {
+    ctx.fillStyle = "white";
+    ctx.font = "40px Arial";
+    ctx.fillText("Game Over", canvas.width / 2 - 100, canvas.height / 2);
+    document.getElementById("restartBtn").style.display = "inline-block";
+    return;
+  }
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  drawBackground();
+  drawCar();
+
+  car.y += car.dy;
+  car.dy += car.gravity;
+
+  if (car.y > 300) {
+    car.y = 300;
+    car.jumping = false;
+  }
+
+  obstacleSpawnTimer++;
+  coinSpawnTimer++;
+  powerSpawnTimer++;
+
+  if (obstacleSpawnTimer > 100) {
+    createObstacle();
+    obstacleSpawnTimer = 0;
+  }
+  if (coinSpawnTimer > 150) {
+    createCoin();
+    coinSpawnTimer = 0;
+  }
+  if (powerSpawnTimer > 500) {
+    createPower();
+    powerSpawnTimer = 0;
+  }
+
+  updateObstacles();
+  updateCoins();
+  updatePowers();
+
+  ctx.fillStyle = "white";
+  ctx.font = "20px Arial";
+  ctx.fillText("Score: " + score, 10, 30);
+
+  requestAnimationFrame(updateGame);
+}
+
+carImage.onload = () => {
+  roadImage.onload = () => {
+    // ready
+  };
+};
