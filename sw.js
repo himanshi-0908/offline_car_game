@@ -1,21 +1,25 @@
-const CACHE_NAME = "car-game-cache-v1";
-const urlsToCache = [
-  "index.html",
-  "style.css",
-  "script.js",
-  "sport-car.png",
-  "obstacle.png",
-  "manifest.json"
+const cacheName = 'car-game-v1';
+const assetsToCache = [
+  '/',
+  '/index.html',
+  '/style.css',
+  '/script.js',
+  '/manifest.json',
+  '/audio/bg-music.mp3',
+  '/images/car.png',
+  '/images/coin.png',
+  '/images/obstacle1.png',
+  '/images/road.png'
 ];
 
-self.addEventListener("install", e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+self.addEventListener('install', event => {
+  event.waitUntil(
+    caches.open(cacheName).then(cache => cache.addAll(assetsToCache))
   );
 });
 
-self.addEventListener("fetch", e => {
-  e.respondWith(
-    caches.match(e.request).then(response => response || fetch(e.request))
+self.addEventListener('fetch', event => {
+  event.respondWith(
+    caches.match(event.request).then(response => response || fetch(event.request))
   );
 });
