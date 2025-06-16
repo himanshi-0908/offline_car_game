@@ -5,7 +5,7 @@ const carImage = new Image();
 carImage.src = "images/car.png";
 
 const roadImage = new Image();
-roadImage.src = "images/road.jpg";
+roadImage.src = "images/bg.jpg"; // Updated background (trees + grass, no road)
 
 const coinImage = new Image();
 coinImage.src = "images/coin.png";
@@ -27,12 +27,13 @@ const car = {
   height: 40,
   speed: 2,
   dy: 0,
-  gravity: 1,
+  gravity: 0.6,
   jumping: false
 };
 
 let bgX = 0;
 let score = 0;
+let level = 1;
 let gameOver = false;
 let obstacles = [];
 let coins = [];
@@ -58,11 +59,13 @@ document.getElementById("startBtn").addEventListener("click", () => {
 
 document.getElementById("restartBtn").addEventListener("click", () => {
   score = 0;
+  level = 1;
   gameOver = false;
   obstacles = [];
   coins = [];
   powers = [];
   car.y = 300;
+  car.x = 100;
   car.dy = 0;
   document.getElementById("restartBtn").style.display = "none";
   updateGame();
@@ -70,19 +73,29 @@ document.getElementById("restartBtn").addEventListener("click", () => {
 
 document.getElementById("jumpBtn").onclick = () => {
   if (!car.jumping) {
-    car.dy = -15;
+    car.dy = -12; // reduced jump height
     car.jumping = true;
+    if (car.x < canvas.width - car.width - 100) {
+      car.x += 15;
+    }
   }
 };
+
 document.getElementById("forwardBtn").onmousedown = () => {
   car.speed = 6;
 };
 document.getElementById("forwardBtn").onmouseup = () => {
   car.speed = 2;
 };
+
 document.getElementById("brakeBtn").onclick = () => {
-  car.speed = 1;
+  car.speed = 0;
 };
+
+// Get ground Y based on X (simulated terrain)
+function getGroundY(x) {
+  return 320 + 20 * Math.sin((x + bgX) * 0.005);
+}
 
 function drawCar() {
   ctx.drawImage(carImage, car.x, car.y, car.width, car.height);
@@ -95,11 +108,25 @@ function drawBackground() {
   ctx.drawImage(roadImage, bgX + canvas.width, 0, canvas.width, canvas.height);
 }
 
+// Optional: draw the virtual road
+function drawVirtualRoad() {
+  ctx.beginPath();
+  ctx.moveTo(0, getGroundY(0));
+  for (let x = 0; x <= canvas.width; x++) {
+    ctx.lineTo(x, getGroundY(x));
+  }
+  ctx.lineTo(canvas.width, canvas.height);
+  ctx.lineTo(0, canvas.height);
+  ctx.closePath();
+  ctx.fillStyle = "#444";
+  ctx.fill();
+}
+
 function createObstacle() {
-  let img = obstacleImages[Math.floor(Math.random() * obstacleImages.length)];
+  const img = obstacleImages[Math.floor(Math.random() * obstacleImages.length)];
   obstacles.push({
-    x: canvas.width,
-    y: 300,
+    x: canvas.width + 100,
+    y: getGroundY(canvas.width + 100) - 5,
     width: 40,
     height: 40,
     speed: car.speed,
@@ -110,7 +137,7 @@ function createObstacle() {
 function createCoin() {
   coins.push({
     x: canvas.width,
-    y: 260 + Math.random() * 40, // near car level
+    y: getGroundY(canvas.width) - 40,
     width: 30,
     height: 30,
     speed: car.speed
@@ -120,16 +147,16 @@ function createCoin() {
 function createPower() {
   powers.push({
     x: canvas.width,
-    y: 260,
+    y: getGroundY(canvas.width) - 40,
     width: 30,
     height: 30,
     speed: car.speed
   });
 }
 
-function updateObstacles() {
+function updateObstacles(currentSpeed) {
   obstacles.forEach((obs, index) => {
-    obs.x -= car.speed;
+    obs.x -= currentSpeed;
     ctx.drawImage(obs.img, obs.x, obs.y, obs.width, obs.height);
 
     if (
@@ -145,9 +172,9 @@ function updateObstacles() {
   });
 }
 
-function updateCoins() {
+function updateCoins(currentSpeed) {
   coins.forEach((coin, index) => {
-    coin.x -= car.speed;
+    coin.x -= currentSpeed;
     ctx.drawImage(coinImage, coin.x, coin.y, coin.width, coin.height);
 
     if (
@@ -164,9 +191,9 @@ function updateCoins() {
   });
 }
 
-function updatePowers() {
+function updatePowers(currentSpeed) {
   powers.forEach((p, index) => {
-    p.x -= car.speed;
+    p.x -= currentSpeed;
     ctx.drawImage(powerImage, p.x, p.y, p.width, p.height);
 
     if (
@@ -194,46 +221,58 @@ function updateGame() {
 
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   drawBackground();
+  drawVirtualRoad(); // optional
   drawCar();
 
   car.y += car.dy;
   car.dy += car.gravity;
 
-  if (car.y > 300) {
-    car.y = 300;
+  let groundY = getGroundY(car.x);
+  if (car.y > groundY) {
+    car.y = groundY;
     car.jumping = false;
+  }
+
+  if (score >= level * 100) {
+    level++;
+    car.speed += 0.5;
   }
 
   obstacleSpawnTimer++;
   coinSpawnTimer++;
   powerSpawnTimer++;
 
-  if (obstacleSpawnTimer > 100) {
+  if (obstacleSpawnTimer > 100 - level * 2) {
     createObstacle();
     obstacleSpawnTimer = 0;
   }
+
   if (coinSpawnTimer > 150) {
     createCoin();
     coinSpawnTimer = 0;
   }
+
   if (powerSpawnTimer > 500) {
     createPower();
     powerSpawnTimer = 0;
   }
 
-  updateObstacles();
-  updateCoins();
-  updatePowers();
+  const currentSpeed = car.jumping ? car.speed + 2 : car.speed;
+
+  updateObstacles(currentSpeed);
+  updateCoins(currentSpeed);
+  updatePowers(currentSpeed);
 
   ctx.fillStyle = "white";
   ctx.font = "20px Arial";
   ctx.fillText("Score: " + score, 10, 30);
+  ctx.fillText("Level: " + level, 10, 60);
 
   requestAnimationFrame(updateGame);
 }
 
 carImage.onload = () => {
   roadImage.onload = () => {
-    // ready
+    // Ready to start
   };
 };
