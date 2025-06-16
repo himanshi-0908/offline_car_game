@@ -2,7 +2,7 @@ const canvas = document.getElementById("gameCanvas");
 const ctx = canvas.getContext("2d");
 
 const carImage = new Image();
-carImage.src = "images/car.png";
+carImage.src = "images/red_car.png";
 
 const roadImage = new Image();
 roadImage.src = "images/bg.jpg"; // Updated background (trees + grass, no road)
